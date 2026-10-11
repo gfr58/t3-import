@@ -68,5 +68,10 @@
     "migration": 53,
     "commit": "adcd90858c3bfece59095465d2f49860ba3dcea9",
     "effect": "4.0.0-rc.115"
+  },
+  {
+    "migration": 54,
+    "commit": "6c8fed35dded9ff71c5b46807125457acbb76be6",
+    "effect": "4.0.0-rc.115"
   }
 ]

@@ -2,7 +2,7 @@
 
 `t3-import` is an independent, local-only CLI for importing Codex and Claude Code conversation history into [T3 Code](https://github.com/pingdotgg/t3code). It writes canonical orchestration events while T3 is closed; T3 rebuilds its own projections on the next launch. The original provider session is bound so the current branch can resume when the source history is still available.
 
-Compatibility is intentionally explicit: **T3 migrations 40–53**, Node.js 22 or newer, and local files only. Unknown T3 schemas fail closed.
+Compatibility is intentionally explicit: **T3 migrations 40–54**, Node.js 22 or newer, and local files only. Unknown T3 schemas fail closed.
 
 ## How it works
 
@@ -14,7 +14,7 @@ With T3 Code closed, the importer validates the local database against the suppo
 
 After an initial import, `t3-import` can append newly settled Codex turns and newly settled turns from linear Claude conversations. Completed, interrupted, and failed turns are preserved; only genuinely active or indeterminate turns are ignored during synchronization. It verifies that the imported checkpoint is still an exact prefix, adopts exact turns already created by resuming through T3, and never replaces edited or deleted history. Claude sessions with multiple non-sidechain leaves after deterministic compaction and retry normalization are reported as conflicts rather than guessed.
 
-If an imported task has diverged or was created by an older importer, `replace` can create a fresh, complete canonical task from the provider transcript. The old task is soft-deleted with a `thread.deleted` event, while its immutable event stream remains available for audit. The provider instance, model, resume cursor, project, and synchronization identity move to the new task atomically. When deterministic normalization reduces a previously fragmented Claude session to one leaf, replacement consolidates every still-visible imported fragment of that session into the new task. Replacement is available for Codex and for Claude sessions with one normalized non-sidechain leaf, and it refuses to snapshot an active provider turn.
+If an imported task has diverged or was created by an older importer, `replace` can create a fresh, complete canonical task from the provider transcript. The old task is soft-deleted with a `thread.deleted` event, while its immutable event stream remains available for audit. The provider instance, model, resume cursor, project, and synchronization identity move to the new task atomically. When deterministic normalization reduces a previously fragmented Claude session to one leaf, replacement consolidates every still-visible imported fragment of that session into the new task. Replacement is available for Codex and for Claude sessions with one normalized non-sidechain leaf, and it refuses to snapshot an active provider turn. Per-task T3 settings such as pinning, snoozing, and the automatic-settlement switch are not carried over; the replacement starts with T3's defaults.
 
 ## Install and run
 
@@ -128,7 +128,7 @@ npm run build
 npm pack
 ```
 
-Compatibility is validated against pinned historical T3 commits for every migration from 40 through 53, including stable `v0.0.42` (`719a76ca1`) and nightly `v0.0.43-nightly.20260920.2031` (`adcd90858`). Earlier versions and unvalidated future migrations fail closed. The importer never upgrades a T3 database; T3 owns migrations, and existing imports can continue synchronizing after an upgrade within the supported range.
+Compatibility is validated against pinned historical T3 commits for every migration from 40 through 54, including stable `v0.0.42` (`719a76ca1`), nightly `v0.0.43-nightly.20260920.2031` (`adcd90858`), and stable `v0.0.45` (`6c8fed35d`). Earlier versions and unvalidated future migrations fail closed. The importer never upgrades a T3 database; T3 owns migrations, and existing imports can continue synchronizing after an upgrade within the supported range.
 
 `npm test` uses committed schemas generated from T3's actual migrations. The additional integration matrix runs the historical event decoders, projectors, and provider restoration services against synthetic databases:
 
@@ -136,6 +136,6 @@ Compatibility is validated against pinned historical T3 commits for every migrat
 npm run test:compatibility
 ```
 
-This requires Git, tar, Node.js 22.21.1 or newer, network access for isolated development dependencies, and a T3 checkout containing the pinned commits at `repos/t3code` (override with `T3_REFERENCE_REPO`). It prepares source snapshots under `artifacts/compatibility`, exercises both providers at all fourteen migrations and every upgrade to 53, and writes a JSON result report. Provider processes are replaced with controlled test adapters; no paid provider work runs. The installed T3 application and live database are not used.
+This requires Git, tar, Node.js 22.21.1 or newer, network access for isolated development dependencies, and a T3 checkout containing the pinned commits at `repos/t3code` (override with `T3_REFERENCE_REPO`). It prepares source snapshots under `artifacts/compatibility`, exercises both providers at all fifteen migrations and every upgrade to 54, and writes a JSON result report. Provider processes are replaced with controlled test adapters; no paid provider work runs. The installed T3 application and live database are not used.
 
 See [compatibility validation](https://github.com/CarlosGtrz/t3-import/blob/main/docs/compatibility.md) for reference commits, fixture regeneration, and the exact validation boundary.

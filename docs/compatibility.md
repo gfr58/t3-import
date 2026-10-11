@@ -1,6 +1,6 @@
 # T3 compatibility validation
 
-The importer supports database migrations 40–53 explicitly. A supported number
+The importer supports database migrations 40–54 explicitly. A supported number
 must also pass integrity and required-column checks. This is not a promise that
 every future T3 commit retaining the same migration number will remain compatible.
 
@@ -26,17 +26,18 @@ Full commit IDs and matching Effect versions live in
 | 51 | `4fed6cfb3517` | Message context |
 | 52 | `719a76ca1dbf` | Thread title state (stable v0.0.42) |
 | 53 | `adcd90858c3b` | Pull request files viewed (nightly 20260920.2031) |
+| 54 | `6c8fed35dded` | Thread auto-settle switch (stable v0.0.45) |
 
 The migration-50 reference is nightly `v0.0.41-nightly.20260910.1473`.
 The migration-52 reference is stable `v0.0.42`; migration 53 is nightly
-`v0.0.43-nightly.20260920.2031`. References 40–49 use Effect
-`4.0.0-beta.103`, references 50–52 use `4.0.0-rc.112`, and reference 53 uses
-`4.0.0-rc.115`.
+`v0.0.43-nightly.20260920.2031`. Migration 54 is stable `v0.0.45`, the last
+release before migration 55. References 40–49 use Effect `4.0.0-beta.103`,
+references 50–52 use `4.0.0-rc.112`, and references 53–54 use `4.0.0-rc.115`.
 
 ## Compatibility findings
 
 - The importer-facing event payloads and provider binding fields work across all
-  fourteen references, so they use one shared writer. Additional project metadata
+  fifteen references, so they use one shared writer. Additional project metadata
   in newer contracts is optional. T3 remains responsible for projection defaults
   and migration repairs; the importer does not write projection rows.
 - Bootstrap processes projectors independently. A turn projector can see the
@@ -57,6 +58,15 @@ The migration-52 reference is stable `v0.0.42`; migration 53 is nightly
   meaning without adding synthetic context or title metadata. Migration 53 adds
   independent pull-request file-view tracking. The shared event writer and
   provider bindings pass the same checks on stable 0.0.42 and the pinned nightly.
+- Migration 54 adds a nullable `projection_threads.auto_settle_disabled_at`
+  column for T3's per-thread auto-settle switch, set by a new
+  `thread.auto-settle-set` event. `thread.created` and the other imported event
+  payloads are unchanged, so imported tasks start with automatic settlement
+  enabled. When a user turns it off, the new event is appended to the task's
+  stream; synchronization ignores it like pin, snooze, and settle events, so it
+  is not a history conflict. `replace` does not carry the setting over: the
+  replacement task starts with automatic settlement enabled, just as it starts
+  unpinned and unsnoozed.
 
 ## Reproduce validation
 
@@ -78,11 +88,11 @@ platform-node-shared, to avoid mixing incompatible prereleases.
 For a focused rerun after preparation:
 
 ```text
-npx tsx scripts/compatibility/run.ts 53
+npx tsx scripts/compatibility/run.ts 54
 ```
 
-Each full run executes 54 scenarios: both sources at all fourteen versions, plus
-both sources upgrading from each version 40–52 to 53. Each scenario covers real
+Each full run executes 58 scenarios: both sources at all fifteen versions, plus
+both sources upgrading from each version 40–53 to 54. Each scenario covers real
 migration execution, event decoding, startup projection, custom instance binding,
 idempotent import/sync/replace, ledger recovery, title updates, changed-history
 conflicts, attachments, plans, activities, terminal states, replacement visibility,
@@ -97,7 +107,7 @@ services, browser rendering, or the orchestration reactor's provider-event trans
 
 Results are written incrementally to a new
 `artifacts/compatibility/run-*/results.json`; the command prints the final path.
-A successful full run must report all 54 scenarios. A failed scenario stops the
+A successful full run must report all 58 scenarios. A failed scenario stops the
 command with a nonzero exit code; partial reports are not evidence of a full pass.
 
 ## Regenerate schema fixtures

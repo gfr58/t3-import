@@ -310,6 +310,28 @@ describe.each(SUPPORTED_MIGRATIONS)("migration-%i incremental synchronization", 
     expect(result.backup).not.toBeNull();
   });
 
+  it("ignores a T3 auto-settle switch event appended to an imported task", async () => {
+    const { workspace, paths, conversation } = await importedFixture("t3-sync-auto-settle-");
+    const db = new Database(paths.dbPath);
+    const threadId = conversation.threads[0]!.sourceSessionId;
+    const version = (db.prepare("SELECT MAX(stream_version) value FROM orchestration_events WHERE stream_id = ?").get(threadId) as { value: number }).value + 1;
+    db.prepare(`INSERT INTO orchestration_events (event_id, aggregate_kind, stream_id, stream_version, event_type, occurred_at, actor_kind, payload_json, metadata_json)
+      VALUES (?, 'thread', ?, ?, 'thread.auto-settle-set', ?, 'client', ?, '{}')`)
+      .run("local-auto-settle-event", threadId, version, "2026-01-01T12:00:00.000Z", JSON.stringify({ threadId, autoSettleDisabledAt: "2026-01-01T12:00:00.000Z", updatedAt: "2026-01-01T12:00:00.000Z" }));
+    db.close();
+    caughtUp(paths);
+
+    const unchanged = await syncConversations([{ conversation }], paths, { dryRun: false });
+    expect(unchanged.hasConflicts).toBe(false);
+    expect(unchanged.results[0]).toMatchObject({ status: "up-to-date", turnsAdded: 0, events: 0 });
+
+    const advanced = advancedConversation(workspace);
+    const synced = await syncConversations([{ conversation: advanced }], paths, { dryRun: false });
+    expect(synced.results[0]).toMatchObject({ status: "synced", turnsAdded: 1, turnsAdopted: 0 });
+    caughtUp(paths);
+    expect((await syncConversations([{ conversation: advanced }], paths, { dryRun: false })).results[0]).toMatchObject({ status: "up-to-date", events: 0 });
+  });
+
   it("syncs a linear Claude lineage and rejects a later branch", async () => {
     const root = await mkdtemp(join(tmpdir(), "t3-sync-claude-"));
     const workspace = join(root, "workspace");
